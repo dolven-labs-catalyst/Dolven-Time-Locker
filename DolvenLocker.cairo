@@ -1,10 +1,9 @@
-#####
-#####
-
-# Dolven-Labs Time Locker Contract for StarkNet
-
-#####
-#####
+#       ___       __                __        __     
+#      / _ \___  / /  _____ ___    / /  ___ _/ /  ___
+#     / // / _ \/ / |/ / -_) _ \  / /__/ _ `/ _ \(_-<
+#    /____/\___/_/|___/\__/_//_/ /____/\_,_/_.__/___/
+                                                                                  
+# Time Locker Contract for StarkNet
 
 %lang starknet
 
