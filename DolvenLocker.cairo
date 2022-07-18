@@ -1,8 +1,8 @@
-#       ___       __                __        __     
+#       ___       __                __        __
 #      / _ \___  / /  _____ ___    / /  ___ _/ /  ___
 #     / // / _ \/ / |/ / -_) _ \  / /__/ _ `/ _ \(_-<
 #    /____/\___/_/|___/\__/_//_/ /____/\_,_/_.__/___/
-                                                                                  
+
 # Time Locker Contract for StarkNet
 
 %lang starknet
@@ -45,6 +45,7 @@ struct Lock_Info:
     member amount : felt
     member token_address : felt
     member manager_address : felt
+    member is_unlocked : felt
 end
 
 @storage_var
@@ -84,7 +85,7 @@ func lock_tokens{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     # todo
     # add erc20 transferfrom caller to this contract
     let lock_instance = Lock_Info(
-        old_nonce, timestamp, end_date, amount, token_address, pool_manager
+        old_nonce, timestamp, end_date, amount, token_address, pool_manager, 0
     )
     nonce.write(old_nonce + 1)
     locks.write(old_nonce, lock_instance)
@@ -136,4 +137,70 @@ func _get_user_locks{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     let (user_locks_memory_loc) = _get_user_locks(user_address, nonce_index + 1, lock_count)
     assert [user_locks_memory_loc] = lock
     return (user_locks_memory_loc + Lock_Info.SIZE)
+end
+
+@external
+func unlock_tokens{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(nonce : felt):
+    alloc_locals
+    let (caller) = get_caller_address()
+    assert_not_zero(caller)
+    let (lock : Lock_Info) = locks.read(nonce)
+    assert_not_equal(caller, lock.manager_address)
+    assert_not_zero(lock.is_unlocked)
+    let (timestamp) = get_block_timestamp()
+    assert_lt(lock.end_date, timestamp)
+    # todo
+    # add erc20 transfer tokens contract to caller
+    let lock_instance = Lock_Info(
+        lock.nonce, lock.start_date, lock.end_date, 0, lock.token_address, lock.manager_address, 1
+    )
+    locks.write(lock.nonce, lock_instance)
+    return ()
+end
+
+@external
+func lock_more_tokens{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    nonce : felt, amount : felt
+):
+    alloc_locals
+    let (caller) = get_caller_address()
+    let (lock : Lock_Info) = locks.read(nonce)
+    assert_not_equal(caller, lock.manager_address)
+    let (timestamp) = get_block_timestamp()
+    assert_lt(timestamp, lock.end_date)
+    assert_nn(amount)
+    assert_not_zero(caller)
+    # todo
+    # add erc20 transferfrom caller to this contract
+    let lock_instance = Lock_Info(
+        lock.nonce,
+        lock.start_date,
+        lock.end_date,
+        lock.amount + amount,
+        lock.token_address,
+        lock.manager_address,
+        0,
+    )
+    locks.write(lock.nonce, lock_instance)
+    return ()
+end
+
+@external
+func transfer_lock_ownable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    nonce : felt, new_manager_address : felt
+):
+    alloc_locals
+    let (caller) = get_caller_address()
+    assert_not_zero(caller)
+    let (lock : Lock_Info) = locks.read(nonce)
+    assert_not_equal(caller, lock.manager_address)
+    let (timestamp) = get_block_timestamp()
+    assert_lt(timestamp, lock.end_date)
+    # todo
+    # add erc20 transfer tokens contract to caller
+    let lock_instance = Lock_Info(
+        lock.nonce, lock.start_date, lock.end_date, 0, lock.token_address, new_manager_address, 1
+    )
+    locks.write(lock.nonce, lock_instance)
+    return ()
 end
