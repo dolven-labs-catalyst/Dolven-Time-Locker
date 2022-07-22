@@ -19,6 +19,7 @@ Dolven Labs is a DAO Based Ecosystem Catalyst for projects built on the StarkNet
 - [x] Adding unlock function
 - [x] Adding lock more function
 - [x] Adding transfer ownable function
-- [ ] Adding lock time increase function
-- [ ] Adding functions events
+- [x] Adding lock time increase function
+- [x] Adding functions events
+- [ ] Writing tests
 - [ ] Writing error messages
