@@ -117,10 +117,18 @@ func lock_tokens{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let (timestamp) = get_block_timestamp()
     let (old_nonce) = nonce.read()
     let (lock_count) = user_lock_count.read(pool_manager)
-    assert_lt(timestamp, end_date)
-    assert_nn(amount)
-    assert_not_zero(pool_manager)
-    assert_not_zero(token_address)
+    with_attr error_message("Current timestamp must be lower than end date. Got: {end_date}."):
+        assert_lt(timestamp, end_date)
+    end
+    with_attr error_message("Amount must be positive. Got: {amount}."):
+        assert_nn(amount)
+    end
+    with_attr error_message("pool_manager must be nonzero. Got: {pool_manager}."):
+        assert_not_zero(pool_manager)
+    end
+    with_attr error_message("token_address must be nonzero. Got: {token_address}."):
+        assert_not_zero(token_address)
+    end
     # todo
     # add erc20 transferfrom caller to this contract
     let lock_instance = Lock_Info(
@@ -183,12 +191,21 @@ end
 func unlock_tokens{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(nonce : felt):
     alloc_locals
     let (caller) = get_caller_address()
-    assert_not_zero(caller)
+
+    with_attr error_message("caller must be nonzero. Got: {caller}."):
+        assert_not_zero(caller)
+    end
     let (lock : Lock_Info) = locks.read(nonce)
-    assert_not_equal(caller, lock.manager_address)
-    assert_not_zero(lock.is_unlocked)
+    with_attr error_message("caller must be equal pool manager. Got: {lock.pool_manager}."):
+        assert_not_equal(caller, lock.manager_address)
+    end
+    with_attr error_message("lock must be unlocked. Got: {lock.is_unlocked}."):
+        assert_not_zero(lock.is_unlocked)
+    end
     let (timestamp) = get_block_timestamp()
-    assert_lt(lock.end_date, timestamp)
+    with_attr error_message("Lock timestamp must be lower than now. Got: {lock.end_date}."):
+        assert_lt(lock.end_date, timestamp)
+    end
     # todo
     # add erc20 transfer tokens contract to caller
     let lock_instance = Lock_Info(
@@ -214,11 +231,19 @@ func lock_more_tokens{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     alloc_locals
     let (caller) = get_caller_address()
     let (lock : Lock_Info) = locks.read(nonce)
-    assert_not_equal(caller, lock.manager_address)
+    with_attr error_message("caller must be equal pool manager. Got: {lock.pool_manager}."):
+        assert_not_equal(caller, lock.manager_address)
+    end
     let (timestamp) = get_block_timestamp()
-    assert_lt(timestamp, lock.end_date)
-    assert_nn(amount)
-    assert_not_zero(caller)
+    with_attr error_message("Timestamp must be lower than lock end date. Got: {lock.end_date}."):
+        assert_lt(timestamp, lock.end_date)
+    end
+    with_attr error_message("Amount must be positive. Got: {amount}."):
+        assert_nn(amount)
+    end
+    with_attr error_message("caller must be nonzero. Got: {caller}."):
+        assert_not_zero(caller)
+    end
     # todo
     # add erc20 transferfrom caller to this contract
     let lock_instance = Lock_Info(
@@ -243,9 +268,15 @@ func increase_lock_time{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
     let (caller) = get_caller_address()
     let (lock : Lock_Info) = locks.read(nonce)
     let (timestamp) = get_block_timestamp()
-    assert_not_equal(caller, lock.manager_address)
-    assert_nn(time)
-    assert_not_zero(caller)
+    with_attr error_message("caller must be equal pool manager. Got: {lock.pool_manager}."):
+        assert_not_equal(caller, lock.manager_address)
+    end
+    with_attr error_message("Time must be positive. Got: {time}."):
+        assert_nn(time)
+    end
+    with_attr error_message("caller must be nonzero. Got: {caller}."):
+        assert_not_zero(caller)
+    end
 
     let lock_instance = Lock_Info(
         lock.nonce,
@@ -267,11 +298,17 @@ func transfer_lock_ownable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ran
 ):
     alloc_locals
     let (caller) = get_caller_address()
-    assert_not_zero(caller)
+    with_attr error_message("caller must be nonzero. Got: {caller}."):
+        assert_not_zero(caller)
+    end
     let (lock : Lock_Info) = locks.read(nonce)
-    assert_not_equal(caller, lock.manager_address)
+    with_attr error_message("caller must be equal pool manager. Got: {lock.pool_manager}."):
+        assert_not_equal(caller, lock.manager_address)
+    end
     let (timestamp) = get_block_timestamp()
-    assert_lt(timestamp, lock.end_date)
+    with_attr error_message("Timestamp must be lower than lock end date. Got: {lock.end_date}."):
+        assert_lt(timestamp, lock.end_date)
+    end
     # todo
     # add erc20 transfer tokens contract to caller
     let lock_instance = Lock_Info(
@@ -281,3 +318,4 @@ func transfer_lock_ownable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ran
     locks.write(lock.nonce, lock_instance)
     return ()
 end
+
