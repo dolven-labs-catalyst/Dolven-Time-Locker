@@ -48,6 +48,45 @@ struct Lock_Info:
     member is_unlocked : felt
 end
 
+@event
+func locked(
+    nonce : felt,
+    start_date : felt,
+    end_date : felt,
+    amount : felt,
+    token_address : felt,
+    manager_address : felt,
+):
+end
+
+@event
+func locked_more_tokens(nonce : felt, timestamp : felt, token_address : felt, amount : felt):
+end
+
+@event
+func lock_time_increased(
+    nonce : felt, timestamp : felt, token_address : felt, increase_time : felt
+):
+end
+
+@event
+func unlocked(
+    nonce : felt,
+    start_date : felt,
+    end_date : felt,
+    unlock_date : felt,
+    amount : felt,
+    token_address : felt,
+    manager_address : felt,
+):
+end
+
+@event
+func transfered_lock_ownable(
+    nonce : felt, timestamp : felt, old_manager_address : felt, manager_address : felt
+):
+end
+
 @storage_var
 func manager() -> (user : felt):
 end
@@ -91,6 +130,7 @@ func lock_tokens{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     locks.write(old_nonce, lock_instance)
     user_nonces.write(pool_manager, lock_count, old_nonce)
     user_lock_count.write(pool_manager, lock_count + 1)
+    locked.emit(old_nonce, timestamp, end_date, amount, token_address, pool_manager)
     return ()
 end
 
@@ -154,6 +194,15 @@ func unlock_tokens{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     let lock_instance = Lock_Info(
         lock.nonce, lock.start_date, lock.end_date, 0, lock.token_address, lock.manager_address, 1
     )
+    unlocked.emit(
+        lock.nonce,
+        lock.start_date,
+        lock.end_date,
+        timestamp,
+        lock.amount,
+        lock.token_address,
+        lock.manager_address,
+    )
     locks.write(lock.nonce, lock_instance)
     return ()
 end
@@ -181,6 +230,33 @@ func lock_more_tokens{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
         lock.manager_address,
         0,
     )
+    locked_more_tokens.emit(lock.nonce, timestamp, lock.token_address, amount)
+    locks.write(lock.nonce, lock_instance)
+    return ()
+end
+
+@external
+func increase_lock_time{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    nonce : felt, time : felt
+):
+    alloc_locals
+    let (caller) = get_caller_address()
+    let (lock : Lock_Info) = locks.read(nonce)
+    let (timestamp) = get_block_timestamp()
+    assert_not_equal(caller, lock.manager_address)
+    assert_nn(time)
+    assert_not_zero(caller)
+
+    let lock_instance = Lock_Info(
+        lock.nonce,
+        lock.start_date,
+        lock.end_date + time,
+        lock.amount,
+        lock.token_address,
+        lock.manager_address,
+        0,
+    )
+    lock_time_increased.emit(lock.nonce, timestamp, lock.token_address, time)
     locks.write(lock.nonce, lock_instance)
     return ()
 end
@@ -201,6 +277,7 @@ func transfer_lock_ownable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ran
     let lock_instance = Lock_Info(
         lock.nonce, lock.start_date, lock.end_date, 0, lock.token_address, new_manager_address, 1
     )
+    transfered_lock_ownable.emit(lock.nonce, timestamp, lock.manager_address, new_manager_address)
     locks.write(lock.nonce, lock_instance)
     return ()
 end
